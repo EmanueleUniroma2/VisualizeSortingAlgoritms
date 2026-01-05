@@ -1,0 +1,425 @@
+ <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sorting Algorithm Visualizer</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f9;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 {
+            color: #4a90e2;
+            margin-bottom: 20px;
+        }
+        .controls {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        label {
+            font-weight: bold;
+            color: #555;
+        }
+        select, input[type="number"], button {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        select:focus, input[type="number"]:focus, button:focus {
+            border-color: #4a90e2;
+            outline: none;
+        }
+        button {
+            background-color: #4a90e2;
+            color: white;
+            cursor: pointer;
+            border: none;
+        }
+        button:hover {
+            background-color: #357bd8;
+        }
+        #visualizer {
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            height: 400px;
+            width: 100%;
+            max-width: 800px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            overflow: hidden;
+        }
+        .bar {
+            margin: 0 2px;
+            background-color: #4a90e2;
+            transition: height 0.1s ease, background-color 0.1s ease;
+        }
+        .bar.sorted {
+            background-color: #2ecc71;
+        }
+        .bar.reading {
+            background-color: #e94e77;
+        }
+        .bar.swapping {
+            background-color: #f5a623;
+        }
+    </style>
+</head>
+<body>
+    <h1>Sorting Algorithm Visualizer</h1>
+    <div class="controls">
+        <label for="algorithm">Algorithm:</label>
+        <select id="algorithm">
+            <option value="bubble">Bubble Sort</option>
+            <option value="insertion">Insertion Sort</option>
+            <option value="selection">Selection Sort</option>
+            <option value="quick">Quick Sort</option>
+            <option value="merge">Merge Sort</option>
+            <option value="heap">Heap Sort</option>
+            <option value="shell">Shell Sort</option>
+            <option value="cocktail">Cocktail Sort</option>
+        </select>
+        <label for="size">Array Size:</label>
+        <input type="number" id="size" min="10" max="100" value="20">
+        <label for="delay">Delay (ms):</label>
+        <input type="number" id="delay" min="1" max="500" value="50">
+        <label for="sound">Enable Sound:</label>
+        <input type="checkbox" id="sound" checked>
+        <button onclick="startSorting()">Start</button>
+        <button onclick="resetArray()">Reset</button>
+    </div>
+    <div id="visualizer"></div>
+
+    <script>
+        let array = [];
+        let sortedArray = [];
+        let maxHeight = 0;
+        let bars = [];
+        let delay = 50;
+        let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let enableSound = true;
+
+        function playBeep(frequency = 440, duration = 0.1, type = 'sine') {
+            if (!enableSound) return;
+            let oscillator = audioCtx.createOscillator();
+            let gainNode = audioCtx.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            oscillator.frequency.value = frequency;
+            oscillator.type = type;
+            oscillator.start();
+            setTimeout(() => {
+                oscillator.stop();
+            }, duration * 1000);
+        }
+
+        function generateArray(size) {
+            array = Array.from({length: size}, () => Math.floor(Math.random() * 300) + 10);
+            sortedArray = [...array].sort((a, b) => a - b);
+            maxHeight = Math.max(...array);
+
+            const visualizer = document.getElementById('visualizer');
+            visualizer.innerHTML = '';
+            bars = [];
+            for (let i = 0; i < size; i++) {
+                const bar = document.createElement('div');
+                bar.classList.add('bar');
+                visualizer.appendChild(bar);
+                bars.push(bar);
+            }
+
+            // Adjust bar width dynamically
+            const barWidth = Math.max(1, Math.min(10, (visualizer.clientWidth - (size * 4)) / size));
+            bars.forEach(bar => bar.style.width = `${barWidth}px`);
+
+            updateBars();
+        }
+
+        function updateBars() {
+            bars.forEach((bar, index) => {
+                bar.style.height = `${(array[index] / maxHeight) * 100}%`;
+                const isSorted = array[index] === sortedArray[index];
+                if (isSorted && !bar.classList.contains('sorted')) {
+                    playBeep(880, 0.05); // Higher beep for sorted
+                }
+                bar.classList.toggle('sorted', isSorted);
+            });
+        }
+
+        function highlightBars(indices, className) {
+            indices.forEach(index => {
+                if (bars[index]) {
+                    bars[index].classList.add(className);
+                    if (className === 'reading') {
+                        playBeep(440, 0.05); // Low beep for reading
+                    } else if (className === 'swapping') {
+                        playBeep(660, 0.05); // Medium beep for swapping
+                    }
+                }
+            });
+        }
+
+        function clearHighlights() {
+            bars.forEach(bar => {
+                bar.classList.remove('reading', 'swapping');
+            });
+        }
+
+        async function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        async function swap(i, j) {
+            highlightBars([i, j], 'swapping');
+            [array[i], array[j]] = [array[j], array[i]];
+            updateBars();
+            await sleep(delay);
+            clearHighlights();
+        }
+
+        async function bubbleSort() {
+            for (let i = 0; i < array.length - 1; i++) {
+                for (let j = 0; j < array.length - i - 1; j++) {
+                    highlightBars([j, j+1], 'reading');
+                    await sleep(delay);
+                    if (array[j] > array[j + 1]) {
+                        await swap(j, j + 1);
+                    } else {
+                        clearHighlights();
+                    }
+                }
+            }
+        }
+
+        async function insertionSort() {
+            for (let i = 1; i < array.length; i++) {
+                let key = array[i];
+                let j = i - 1;
+                highlightBars([i], 'reading');
+                await sleep(delay);
+                while (j >= 0 && array[j] > key) {
+                    highlightBars([j, j+1], 'reading');
+                    await sleep(delay);
+                    array[j + 1] = array[j];
+                    j--;
+                    updateBars();
+                    await sleep(delay);
+                    clearHighlights();
+                }
+                array[j + 1] = key;
+                updateBars();
+            }
+        }
+
+        async function selectionSort() {
+            for (let i = 0; i < array.length - 1; i++) {
+                let minIdx = i;
+                for (let j = i + 1; j < array.length; j++) {
+                    highlightBars([minIdx, j], 'reading');
+                    await sleep(delay);
+                    if (array[j] < array[minIdx]) {
+                        minIdx = j;
+                    }
+                    clearHighlights();
+                }
+                if (minIdx !== i) {
+                    await swap(i, minIdx);
+                }
+            }
+        }
+
+        async function partition(low, high) {
+            let pivot = array[high];
+            let i = low - 1;
+            for (let j = low; j < high; j++) {
+                highlightBars([j, high], 'reading');
+                await sleep(delay);
+                if (array[j] < pivot) {
+                    i++;
+                    await swap(i, j);
+                } else {
+                    clearHighlights();
+                }
+            }
+            await swap(i + 1, high);
+            return i + 1;
+        }
+
+        async function quickSort(low = 0, high = array.length - 1) {
+            if (low < high) {
+                let pi = await partition(low, high);
+                await quickSort(low, pi - 1);
+                await quickSort(pi + 1, high);
+            }
+        }
+
+        async function mergeSort(start = 0, end = array.length - 1) {
+            if (start >= end) return;
+            const mid = Math.floor((start + end) / 2);
+            await mergeSort(start, mid);
+            await mergeSort(mid + 1, end);
+            await merge(start, mid, end);
+        }
+
+        async function merge(start, mid, end) {
+            const left = array.slice(start, mid + 1);
+            const right = array.slice(mid + 1, end + 1);
+            let i = 0, j = 0, k = start;
+            while (i < left.length && j < right.length) {
+                highlightBars([start + i, mid + 1 + j], 'reading');
+                await sleep(delay);
+                if (left[i] <= right[j]) {
+                    array[k++] = left[i++];
+                } else {
+                    array[k++] = right[j++];
+                }
+                clearHighlights();
+                updateBars();
+                await sleep(delay);
+            }
+            while (i < left.length) {
+                array[k++] = left[i++];
+                updateBars();
+                await sleep(delay);
+            }
+            while (j < right.length) {
+                array[k++] = right[j++];
+                updateBars();
+                await sleep(delay);
+            }
+        }
+
+        async function heapSort() {
+            // Build max heap
+            for (let i = Math.floor(array.length / 2) - 1; i >= 0; i--) {
+                await heapify(array.length, i);
+            }
+            // Extract elements
+            for (let i = array.length - 1; i > 0; i--) {
+                await swap(0, i);
+                await heapify(i, 0);
+            }
+        }
+
+        async function heapify(n, i) {
+            let largest = i;
+            let l = 2 * i + 1;
+            let r = 2 * i + 2;
+            if (l < n) {
+                highlightBars([i, l], 'reading');
+                await sleep(delay);
+                if (array[l] > array[largest]) largest = l;
+                clearHighlights();
+            }
+            if (r < n) {
+                highlightBars([i, r], 'reading');
+                await sleep(delay);
+                if (array[r] > array[largest]) largest = r;
+                clearHighlights();
+            }
+            if (largest !== i) {
+                await swap(i, largest);
+                await heapify(n, largest);
+            }
+        }
+
+        async function shellSort() {
+            let gap = Math.floor(array.length / 2);
+            while (gap > 0) {
+                for (let i = gap; i < array.length; i++) {
+                    let temp = array[i];
+                    let j = i;
+                    while (j >= gap && array[j - gap] > temp) {
+                        highlightBars([j, j - gap], 'reading');
+                        await sleep(delay);
+                        array[j] = array[j - gap];
+                        j -= gap;
+                        updateBars();
+                        await sleep(delay);
+                        clearHighlights();
+                    }
+                    array[j] = temp;
+                    updateBars();
+                }
+                gap = Math.floor(gap / 2);
+            }
+        }
+
+        async function cocktailSort() {
+            let swapped = true;
+            let start = 0;
+            let end = array.length - 1;
+            while (swapped) {
+                swapped = false;
+                for (let i = start; i < end; i++) {
+                    highlightBars([i, i + 1], 'reading');
+                    await sleep(delay);
+                    if (array[i] > array[i + 1]) {
+                        await swap(i, i + 1);
+                        swapped = true;
+                    } else {
+                        clearHighlights();
+                    }
+                }
+                if (!swapped) break;
+                end--;
+                swapped = false;
+                for (let i = end - 1; i >= start; i--) {
+                    highlightBars([i, i + 1], 'reading');
+                    await sleep(delay);
+                    if (array[i] > array[i + 1]) {
+                        await swap(i, i + 1);
+                        swapped = true;
+                    } else {
+                        clearHighlights();
+                    }
+                }
+                start++;
+            }
+        }
+
+        async function startSorting() {
+            const algo = document.getElementById('algorithm').value;
+            const size = parseInt(document.getElementById('size').value);
+            delay = parseInt(document.getElementById('delay').value);
+            enableSound = document.getElementById('sound').checked;
+            generateArray(size);
+            switch (algo) {
+                case 'bubble': await bubbleSort(); break;
+                case 'insertion': await insertionSort(); break;
+                case 'selection': await selectionSort(); break;
+                case 'quick': await quickSort(); break;
+                case 'merge': await mergeSort(); break;
+                case 'heap': await heapSort(); break;
+                case 'shell': await shellSort(); break;
+                case 'cocktail': await cocktailSort(); break;
+            }
+        }
+
+        function resetArray() {
+            const size = parseInt(document.getElementById('size').value);
+            generateArray(size);
+        }
+
+        // Initial load
+        resetArray();
+    </script>
+</body>
+</html>
