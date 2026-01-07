@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -41,7 +41,7 @@
             margin-bottom: 20px;
             display: flex;
             flex-wrap: wrap;
-            gap: 12px;
+            gap: 15px;
             justify-content: center;
             align-items: center;
         }
@@ -51,6 +51,14 @@
         button:hover { background-color: #27ae60; }
         button#resetBtn { background-color: #e74c3c; }
         button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+
+        .audio-control {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 14px;
+            cursor: pointer;
+        }
 
         #visualizer {
             display: flex;
@@ -94,88 +102,92 @@
 
     <div class="controls">
         <select id="algorithm" onchange="updateDescription()">
-            <optgroup label="Ibridi & Moderni">
+            <optgroup label="Modern & Hybrid">
                 <option value="timsort">Timsort [O(n log n)]</option>
                 <option value="quick">Quick Sort [O(n log n)]</option>
                 <option value="merge">Merge Sort [O(n log n)]</option>
             </optgroup>
-            <optgroup label="Non-Comparativi">
+            <optgroup label="Non-Comparative">
                 <option value="radix">Radix Sort (LSD) [O(nk)]</option>
             </optgroup>
-            <optgroup label="Classici">
+            <optgroup label="Classic">
                 <option value="heap">Heap Sort [O(n log n)]</option>
                 <option value="shell">Shell Sort [O(n log n)]</option>
                 <option value="bubble">Bubble Sort [O(n²)]</option>
                 <option value="insertion">Insertion Sort [O(n²)]</option>
                 <option value="selection">Selection Sort [O(n²)]</option>
             </optgroup>
-            <optgroup label="Esoterici">
+            <optgroup label="Experimental">
                 <option value="bogo">Bogo Sort [O(n · n!)]</option>
             </optgroup>
         </select>
         
-        <label>Taglia:</label>
+        <label>Size:</label>
         <input type="number" id="size" min="5" max="250" value="50">
-        <label>Ritardo (ms):</label>
-        <input type="number" id="delay" min="10" max="100" value="30">
+        <label>Delay (ms):</label>
+        <input type="number" id="delay" min="1" max="500" value="30">
         
-        <button id="startBtn" onclick="startSorting()">Esegui</button>
+        <label class="audio-control">
+            <input type="checkbox" id="audioToggle" checked> 🔊 Sound
+        </label>
+
+        <button id="startBtn" onclick="startSorting()">Run</button>
         <button id="resetBtn" onclick="resetArray()">Reset</button>
     </div>
 
     <div id="visualizer"></div>
 
     <div id="description-panel">
-        <h3 id="desc-title">Seleziona un algoritmo</h3>
-        <p id="desc-text">Scegli un algoritmo dal menu per visualizzarne la descrizione e la complessità.</p>
+        <h3 id="desc-title">Select an algorithm</h3>
+        <p id="desc-text">Pick a method from the menu to see how it works and its speed.</p>
     </div>
 
     <script>
         let array = [], sortedArray = [], bars = [];
-        let delay = 10, isSorting = false, abortController = new AbortController();
+        let delay = 30, isSorting = false, abortController = new AbortController();
         let reads = 0, writes = 0, comps = 0;
         let audioCtx = null;
 
         const descriptions = {
             timsort: {
-                title: "Timsort [O(n log n)]",
-                text: "L'algoritmo standard di Python e Java. È un ibrido tra Merge Sort e Insertion Sort. Cerca sequenze già ordinate (runs) e le fonde. È estremamente efficiente con dati reali che spesso contengono parti già ordinate."
+                title: "Timsort",
+                text: "The modern standard used in Python and Java. It is a smart mix of Merge Sort and Insertion Sort. It looks for parts of the data that are already sorted to speed things up. Very efficient for real-world information."
             },
             radix: {
-                title: "Radix Sort (LSD) [O(nk)]",
-                text: "Algoritmo non comparativo. Ordina i numeri cifra per cifra, partendo dalla meno significativa (LSD). Distribuisce gli elementi in 'secchi' (bucket) da 0 a 9. Noterai che le 'Comparisons' restano a zero!"
+                title: "Radix Sort (LSD)",
+                text: "A unique method that doesn't compare numbers. Instead, it sorts items digit by digit (from right to left). It puts numbers into 10 'buckets' (0-9). You will notice the 'Comparisons' count stays at zero!"
             },
             quick: {
-                title: "Quick Sort [O(n log n)]",
-                text: "Usa la strategia 'Divide et Impera'. Sceglie un perno (pivot) e sposta gli elementi minori a sinistra e i maggiori a destra. È molto veloce grazie all'uso efficiente della cache della CPU."
+                title: "Quick Sort",
+                text: "One of the fastest methods. It picks a 'pivot' value and moves smaller items to the left and larger items to the right. It is very fast because it works well with computer memory."
             },
             merge: {
-                title: "Merge Sort [O(n log n)]",
-                text: "Divide l'array a metà ricorsivamente finché non rimangono elementi singoli, poi li fonde in ordine. È molto stabile e garantisce prestazioni costanti, ma richiede memoria extra."
+                title: "Merge Sort",
+                text: "A reliable 'divide and conquer' method. It splits the list into single items and then merges them back together in the correct order. It is very stable but needs a bit of extra space to work."
             },
             bubble: {
-                title: "Bubble Sort [O(n²)]",
-                text: "L'algoritmo più semplice ma meno efficiente. Confronta coppie adiacenti e le scambia se sono nell'ordine sbagliato. I valori più grandi 'bollono' verso la fine dell'array."
+                title: "Bubble Sort",
+                text: "A simple but slow method. It compares pairs of neighbors and swaps them if they are in the wrong order. Large values 'bubble up' to the end of the list one by one."
             },
             insertion: {
-                title: "Insertion Sort [O(n²)]",
-                text: "Simile a come ordiniamo le carte in mano. Costruisce l'array ordinato un elemento alla volta, inserendolo nella posizione corretta tra quelli già esaminati."
+                title: "Insertion Sort",
+                text: "Similar to how you sort playing cards in your hand. It takes one item at a time and slides it into the correct position among the items it has already checked."
             },
             selection: {
-                title: "Selection Sort [O(n²)]",
-                text: "Cerca ripetutamente l'elemento minimo dalla parte non ordinata e lo mette all'inizio. Fa pochi scambi (Writes) ma molti confronti (Comparisons)."
+                title: "Selection Sort",
+                text: "It scans the whole list to find the smallest number, then puts it at the beginning. It keeps doing this for the rest of the list. It does a lot of looking but very little moving."
             },
             heap: {
-                title: "Heap Sort [O(n log n)]",
-                text: "Trasforma l'array in una struttura a 'mucchio' (Heap), dove l'elemento radice è sempre il massimo. Estrae la radice ripetutamente per ottenere l'array ordinato."
+                title: "Heap Sort",
+                text: "This method organizes the data into a tree-like structure called a 'Heap'. It repeatedly finds the largest item and moves it to the end. It's fast and doesn't need extra memory."
             },
             shell: {
-                title: "Shell Sort [O(n log n)]",
-                text: "Una generalizzazione dell'Insertion Sort che permette lo scambio di elementi distanti, riducendo gradualmente la distanza tra loro (gap)."
+                title: "Shell Sort",
+                text: "An improved version of Insertion Sort. It starts by sorting pairs of items far apart from each other, then slowly reduces the distance between them."
             },
             bogo: {
-                title: "Bogo Sort [O(n · n!)]",
-                text: "Un algoritmo scherzoso: mescola l'array a caso finché non risulta ordinato. È statisticamente probabile che non finisca prima della fine dell'universo per array grandi."
+                title: "Bogo Sort",
+                text: "A joke algorithm. It shuffles the list randomly and checks if it's sorted. It is extremely slow and might take billions of years to sort a large list!"
             }
         };
 
@@ -185,7 +197,6 @@
             document.getElementById('desc-text').innerText = descriptions[val].text;
         }
 
-        // --- Core Helpers ---
         function updateStats() {
             document.getElementById('stat-reads').innerText = reads;
             document.getElementById('stat-writes').innerText = writes;
@@ -229,14 +240,12 @@
             clearHighlights();
         }
 
-        // --- NUOVI ALGORITMI ---
+        // --- ALGORITHMS ---
 
         async function timSort() {
             let n = array.length;
             const RUN = 32;
-
             for (let i = 0; i < n; i += RUN) {
-                // Insertion sort per piccoli pezzi
                 for (let j = i + 1; j < Math.min(i + RUN, n); j++) {
                     let temp = await getVal(j);
                     let k = j - 1;
@@ -247,7 +256,6 @@
                     await setVal(k + 1, temp);
                 }
             }
-
             for (let size = RUN; size < n; size = 2 * size) {
                 for (let left = 0; left < n; left += 2 * size) {
                     let mid = left + size - 1;
@@ -268,28 +276,21 @@
             let n = array.length;
             let output = new Array(n);
             let count = new Array(10).fill(0);
-
             for (let i = 0; i < n; i++) {
                 let val = await getVal(i);
                 count[Math.floor(val / exp) % 10]++;
             }
-
             for (let i = 1; i < 10; i++) count[i] += count[i - 1];
-
             for (let i = n - 1; i >= 0; i--) {
-                let val = array[i]; // Lettura
+                let val = array[i];
                 let digit = Math.floor(val / exp) % 10;
                 output[count[digit] - 1] = val;
                 count[digit]--;
                 reads++;
             }
-
-            for (let i = 0; i < n; i++) {
-                await setVal(i, output[i]);
-            }
+            for (let i = 0; i < n; i++) await setVal(i, output[i]);
         }
 
-        // --- ALTRI ALGORITMI (Inclusi per completezza) ---
         async function merge(l, m, r) {
             let left = [], right = [];
             for (let i = l; i <= m; i++) left.push(await getVal(i));
@@ -317,7 +318,8 @@
             }
         }
 
-        // --- INFRASTRUTTURA ---
+        // --- UI & ENGINE ---
+
         async function startSorting() {
             if (isSorting) return;
             isSorting = true;
@@ -332,7 +334,6 @@
                 else if (algo === 'radix') await radixSort();
                 else if (algo === 'quick') await quickSort(0, array.length - 1);
                 else if (algo === 'merge') {
-                    // Semplice wrapper per Merge Sort ricorsivo
                     const mSort = async (l, r) => {
                         if (l < r) {
                             let m = Math.floor((l+r)/2);
@@ -354,10 +355,17 @@
                         await setVal(j+1, k);
                     }
                 }
-                // ... Altri algoritmi mappati similmente ...
+                else if (algo === 'selection') {
+                    for(let i=0; i<array.length; i++) {
+                        let min = i;
+                        for(let j=i+1; j<array.length; j++) 
+                            if(await compare(await getVal(min), await getVal(j))) min = j;
+                        await swap(i, min);
+                    }
+                }
                 
                 bars.forEach(b => b.classList.add('sorted'));
-            } catch (e) { console.log("Abort"); } 
+            } catch (e) { console.log("Process stopped"); } 
             finally {
                 isSorting = false;
                 document.getElementById('startBtn').disabled = false;
@@ -391,8 +399,12 @@
         function highlightBars(ids, cls) { ids.forEach(i => bars[i] && bars[i].classList.add(cls)); }
         function clearHighlights() { bars.forEach(b => b.classList.remove('reading', 'swapping')); }
         function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
         function playBeep(f) {
-            if(!audioCtx) audioCtx = new AudioContext();
+            const audioEnabled = document.getElementById('audioToggle').checked;
+            if (!audioEnabled) return;
+
+            if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             let o = audioCtx.createOscillator(), g = audioCtx.createGain();
             o.connect(g); g.connect(audioCtx.destination);
             o.frequency.value = f; g.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
