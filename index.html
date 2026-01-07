@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sorting Lab Pro - Benchmarker</title>
+    <title>Sorting Lab Pro - Educational Benchmarker</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -52,13 +52,7 @@
         button#resetBtn { background-color: #e74c3c; }
         button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
 
-        .audio-control {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            font-size: 14px;
-            cursor: pointer;
-        }
+        .audio-control { display: flex; align-items: center; gap: 5px; font-size: 14px; cursor: pointer; }
 
         #visualizer {
             display: flex;
@@ -88,6 +82,7 @@
             line-height: 1.6;
         }
         #description-panel h3 { margin-top: 0; color: #2980b9; }
+        .complexity { font-weight: bold; color: #e67e22; margin-top: 10px; display: block; }
     </style>
 </head>
 <body>
@@ -97,41 +92,41 @@
         <div class="stat-item">Comparisons<span id="stat-comp" class="stat-value">0</span></div>
         <div class="stat-item">Reads<span id="stat-reads" class="stat-value">0</span></div>
         <div class="stat-item">Writes<span id="stat-writes" class="stat-value">0</span></div>
-        <div class="stat-item">Norm. Time<span id="stat-time" class="stat-value">0.00</span></div>
+        <div class="stat-item">Estimated Effort<span id="stat-time" class="stat-value">0.00</span></div>
     </div>
 
     <div class="controls">
         <select id="algorithm" onchange="updateDescription()">
-            <optgroup label="Modern & Hybrid">
-                <option value="timsort">Timsort [O(n log n)]</option>
-                <option value="quick">Quick Sort [O(n log n)]</option>
-                <option value="merge">Merge Sort [O(n log n)]</option>
+            <optgroup label="Modern & Fast">
+                <option value="timsort">Timsort (Java/Python Default)</option>
+                <option value="quick">Quick Sort (Standard Fast)</option>
+                <option value="merge">Merge Sort (Stable & Reliable)</option>
             </optgroup>
-            <optgroup label="Non-Comparative">
-                <option value="radix">Radix Sort (LSD) [O(nk)]</option>
+            <optgroup label="Unique Logic">
+                <option value="radix">Radix Sort (No Comparisons!)</option>
+                <option value="heap">Heap Sort (Memory Efficient)</option>
             </optgroup>
-            <optgroup label="Classic">
-                <option value="heap">Heap Sort [O(n log n)]</option>
-                <option value="shell">Shell Sort [O(n log n)]</option>
-                <option value="bubble">Bubble Sort [O(n²)]</option>
-                <option value="insertion">Insertion Sort [O(n²)]</option>
-                <option value="selection">Selection Sort [O(n²)]</option>
+            <optgroup label="Simple Classics">
+                <option value="shell">Shell Sort</option>
+                <option value="insertion">Insertion Sort</option>
+                <option value="selection">Selection Sort</option>
+                <option value="bubble">Bubble Sort</option>
             </optgroup>
-            <optgroup label="Experimental">
-                <option value="bogo">Bogo Sort [O(n · n!)]</option>
+            <optgroup label="The Joke">
+                <option value="bogo">Bogo Sort (Random Luck)</option>
             </optgroup>
         </select>
         
         <label>Size:</label>
-        <input type="number" id="size" min="5" max="250" value="50">
+        <input type="number" id="size" min="5" max="200" value="50">
         <label>Delay (ms):</label>
-        <input type="number" id="delay" min="1" max="500" value="30">
+        <input type="number" id="delay" min="1" max="1000" value="30">
         
         <label class="audio-control">
             <input type="checkbox" id="audioToggle" checked> 🔊 Sound
         </label>
 
-        <button id="startBtn" onclick="startSorting()">Run</button>
+        <button id="startBtn" onclick="startSorting()">Run Algorithm</button>
         <button id="resetBtn" onclick="resetArray()">Reset</button>
     </div>
 
@@ -140,6 +135,7 @@
     <div id="description-panel">
         <h3 id="desc-title">Select an algorithm</h3>
         <p id="desc-text">Pick a method from the menu to see how it works and its speed.</p>
+        <span id="desc-comp" class="complexity"></span>
     </div>
 
     <script>
@@ -149,24 +145,66 @@
         let audioCtx = null;
 
         const descriptions = {
-            timsort: { title: "Timsort", text: "The modern standard used in Python and Java. It's a hybrid of Merge and Insertion sort." },
-            radix: { title: "Radix Sort (LSD)", text: "Non-comparative sort. It sorts numbers digit by digit." },
-            quick: { title: "Quick Sort", text: "Fast 'divide and conquer' method using a pivot." },
-            merge: { title: "Merge Sort", text: "Splits the array into small pieces and merges them in order." },
-            bubble: { title: "Bubble Sort", text: "Simple but slow. Neighbors swap until the largest 'bubbles' to the end." },
-            insertion: { title: "Insertion Sort", text: "Builds the sorted list one item at a time, like sorting cards." },
-            selection: { title: "Selection Sort", text: "Finds the smallest item and puts it at the start, repeatedly." },
-            heap: { title: "Heap Sort", text: "Uses a Binary Heap tree structure to find the largest items efficiently." },
-            shell: { title: "Shell Sort", text: "An improved Insertion Sort that swaps distant items first." },
-            bogo: { title: "Bogo Sort", text: "Pure luck! Shuffles randomly until sorted. Don't use on large arrays!" }
+            timsort: {
+                title: "Timsort",
+                text: "Timsort is a high-performance algorithm used by real-world systems like Android and Python. It works by finding small sections of data that are already sorted (called 'runs') and then merges those sections together using Merge Sort. It's incredibly smart and gets faster if the data is already partially in order.",
+                comp: "Best Case: O(n) | Average: O(n log n)"
+            },
+            quick: {
+                title: "Quick Sort",
+                text: "Quick Sort uses a 'Divide and Conquer' strategy. It picks one number as a 'Pivot' and moves all smaller numbers to its left and all larger numbers to its right. It then repeats this for the left and right sides. It is usually the fastest method for general computer use.",
+                comp: "Average Case: O(n log n)"
+            },
+            merge: {
+                title: "Merge Sort",
+                text: "Imagine splitting a deck of cards in half repeatedly until you have many tiny piles of 1 card each. Then, you merge them back together in pairs, making sure each new pile is sorted. This is Merge Sort. It is very reliable and never slows down, even with messy data.",
+                comp: "Guaranteed Performance: O(n log n)"
+            },
+            radix: {
+                title: "Radix Sort (LSD)",
+                text: "Radix is a 'non-comparative' sort. It never asks 'is this number bigger than that one?'. Instead, it groups numbers by their digits (first the ones, then the tens, then the hundreds). Watch the stats: the 'Comparisons' counter will stay at zero!",
+                comp: "Best for numbers: O(nk)"
+            },
+            heap: {
+                title: "Heap Sort",
+                text: "Heap Sort visualizes the list as a 'Binary Tree' (a family tree shape). It organizes the tree so the largest number is always at the top (the root). It then takes that largest number, puts it at the end of the list, and fixes the tree to find the next largest. It uses zero extra memory.",
+                comp: "Average Case: O(n log n)"
+            },
+            bubble: {
+                title: "Bubble Sort",
+                text: "The most famous but least efficient way to sort. It compares every pair of neighbors. If they are in the wrong order, they swap. The largest numbers 'bubble up' to the end of the list like air bubbles in water. It's very slow for large lists.",
+                comp: "Slowest Case: O(n²)"
+            },
+            insertion: {
+                title: "Insertion Sort",
+                text: "This is exactly how most people sort a hand of playing cards. You take one item at a time and slide it into the correct spot among the items you've already sorted. It's very fast for very small lists.",
+                comp: "Great for small data: O(n²)"
+            },
+            selection: {
+                title: "Selection Sort",
+                text: "Selection Sort is very simple but repetitive. It scans the whole list to find the absolute smallest number and swaps it into the first position. Then it scans the rest to find the second smallest, and so on. It does very few 'Writes' but a lot of 'Comparisons'.",
+                comp: "Constant Time: O(n²)"
+            },
+            shell: {
+                title: "Shell Sort",
+                text: "Think of this as a 'long-distance' Insertion Sort. Instead of swapping neighbors, it swaps items that are far apart. It slowly reduces the gap between items until it finishes with a normal Insertion Sort. This 'pre-sorting' makes it much faster than the classics.",
+                comp: "Average Case: O(n log n)"
+            },
+            bogo: {
+                title: "Bogo Sort",
+                text: "Also known as 'Stupid Sort'. It shuffles the list completely randomly and checks if it's sorted. If not, it shuffles again. It could finish in 1 second, or it could take 1,000 years. Don't use this for anything serious!",
+                comp: "Complexity: O(Infinite Luck)"
+            }
         };
 
         function updateDescription() {
             const val = document.getElementById('algorithm').value;
             document.getElementById('desc-title').innerText = descriptions[val].title;
             document.getElementById('desc-text').innerText = descriptions[val].text;
+            document.getElementById('desc-comp').innerText = descriptions[val].comp;
         }
 
+        // --- Core Helpers ---
         function updateStats() {
             document.getElementById('stat-reads').innerText = reads;
             document.getElementById('stat-writes').innerText = writes;
@@ -205,14 +243,96 @@
             [array[i], array[j]] = [array[j], array[i]];
             updateStats(); updateBars();
             highlightBars([i, j], 'swapping');
-            playBeep(500);
+            playBeep(400);
             await sleep(delay);
             clearHighlights();
         }
 
-        // --- HEAP SORT LOGIC ---
+        // --- ALGORITHMS ---
+
+        async function bubbleSort() {
+            let n = array.length;
+            for (let i = 0; i < n; i++) {
+                for (let j = 0; j < n - i - 1; j++) {
+                    if (await compare(await getVal(j), await getVal(j + 1))) await swap(j, j + 1);
+                }
+            }
+        }
+
+        async function selectionSort() {
+            let n = array.length;
+            for (let i = 0; i < n; i++) {
+                let minIdx = i;
+                for (let j = i + 1; j < n; j++) {
+                    if (await compare(await getVal(minIdx), await getVal(j))) minIdx = j;
+                }
+                if (minIdx !== i) await swap(i, minIdx);
+            }
+        }
+
+        async function insertionSort(start = 0, end = array.length - 1) {
+            for (let i = start + 1; i <= end; i++) {
+                let key = await getVal(i);
+                let j = i - 1;
+                while (j >= start && await compare(await getVal(j), key)) {
+                    await setVal(j + 1, array[j]);
+                    j--;
+                }
+                await setVal(j + 1, key);
+            }
+        }
+
+        async function quickSort(low, high) {
+            if (low < high) {
+                let pivot = await getVal(high);
+                let i = low - 1;
+                for (let j = low; j < high; j++) {
+                    if (!(await compare(await getVal(j), pivot))) {
+                        i++;
+                        await swap(i, j);
+                    }
+                }
+                await swap(i + 1, high);
+                let pi = i + 1;
+                await quickSort(low, pi - 1);
+                await quickSort(pi + 1, high);
+            }
+        }
+
+        async function mergeSort(l, r) {
+            if (l < r) {
+                let m = Math.floor((l + r) / 2);
+                await mergeSort(l, m);
+                await mergeSort(m + 1, r);
+                await merge(l, m, r);
+            }
+        }
+
+        async function merge(l, m, r) {
+            let n1 = m - l + 1, n2 = r - m;
+            let L = [], R = [];
+            for (let i = 0; i < n1; i++) L.push(await getVal(l + i));
+            for (let j = 0; j < n2; j++) R.push(await getVal(m + 1 + j));
+            let i = 0, j = 0, k = l;
+            while (i < n1 && j < n2) {
+                if (L[i] <= R[j]) await setVal(k++, L[i++]);
+                else await setVal(k++, R[j++]);
+            }
+            while (i < n1) await setVal(k++, L[i++]);
+            while (j < n2) await setVal(k++, R[j++]);
+        }
+
         async function heapSort() {
             let n = array.length;
+            const heapify = async (size, idx) => {
+                let largest = idx, l = 2 * idx + 1, r = 2 * idx + 2;
+                if (l < size && await compare(await getVal(l), await getVal(largest))) largest = l;
+                if (r < size && await compare(await getVal(r), await getVal(largest))) largest = r;
+                if (largest !== idx) {
+                    await swap(idx, largest);
+                    await heapify(size, largest);
+                }
+            };
             for (let i = Math.floor(n / 2) - 1; i >= 0; i--) await heapify(n, i);
             for (let i = n - 1; i > 0; i--) {
                 await swap(0, i);
@@ -220,17 +340,37 @@
             }
         }
 
-        async function heapify(n, i) {
-            let largest = i, l = 2 * i + 1, r = 2 * i + 2;
-            if (l < n && await compare(await getVal(l), await getVal(largest))) largest = l;
-            if (r < n && await compare(await getVal(r), await getVal(largest))) largest = r;
-            if (largest !== i) {
-                await swap(i, largest);
-                await heapify(n, largest);
+        async function radixSort() {
+            let max = Math.max(...array);
+            for (let exp = 1; Math.floor(max / exp) > 0; exp *= 10) {
+                let output = new Array(array.length), count = new Array(10).fill(0);
+                for (let i = 0; i < array.length; i++) {
+                    let digit = Math.floor(await getVal(i) / exp) % 10;
+                    count[digit]++;
+                }
+                for (let i = 1; i < 10; i++) count[i] += count[i - 1];
+                for (let i = array.length - 1; i >= 0; i--) {
+                    let val = array[i];
+                    let digit = Math.floor(val / exp) % 10;
+                    output[count[digit] - 1] = val;
+                    count[digit]--;
+                    reads++;
+                }
+                for (let i = 0; i < array.length; i++) await setVal(i, output[i]);
             }
         }
 
-        // --- OTHER LOGIC ---
+        async function timSort() {
+            let n = array.length, RUN = 32;
+            for (let i = 0; i < n; i += RUN) await insertionSort(i, Math.min(i + RUN - 1, n - 1));
+            for (let size = RUN; size < n; size = 2 * size) {
+                for (let left = 0; left < n; left += 2 * size) {
+                    let mid = left + size - 1, right = Math.min(left + 2 * size - 1, n - 1);
+                    if (mid < right) await merge(left, mid, right);
+                }
+            }
+        }
+
         async function shellSort() {
             let n = array.length;
             for (let gap = Math.floor(n/2); gap > 0; gap = Math.floor(gap/2)) {
@@ -258,9 +398,7 @@
             }
         }
 
-        // --- (Timsort, Radix, Quick, Merge, etc. logic remains same as previous turn) ---
-        // [Logic Omitted for brevity, but integrated in the execution function below]
-
+        // --- Execution Logic ---
         async function startSorting() {
             if (isSorting) return;
             isSorting = true;
@@ -271,31 +409,27 @@
             const algo = document.getElementById('algorithm').value;
 
             try {
-                if (algo === 'heap') await heapSort();
+                if (algo === 'bubble') await bubbleSort();
+                else if (algo === 'selection') await selectionSort();
+                else if (algo === 'insertion') await insertionSort();
+                else if (algo === 'quick') await quickSort(0, array.length - 1);
+                else if (algo === 'merge') await mergeSort(0, array.length - 1);
+                else if (algo === 'heap') await heapSort();
+                else if (algo === 'radix') await radixSort();
+                else if (algo === 'timsort') await timSort();
                 else if (algo === 'shell') await shellSort();
                 else if (algo === 'bogo') await bogoSort();
-                else if (algo === 'bubble') {
-                    for(let i=0; i<array.length; i++) 
-                        for(let j=0; j<array.length-i-1; j++) 
-                            if(await compare(await getVal(j), await getVal(j+1))) await swap(j, j+1);
-                }
-                // ... (Other algorithms: quick, merge, insertion, selection, etc.)
-                else if (algo === 'selection') {
-                    for(let i=0; i<array.length; i++) {
-                        let min = i;
-                        for(let j=i+1; j<array.length; j++) 
-                            if(await compare(await getVal(min), await getVal(j))) min = j;
-                        await swap(i, min);
-                    }
-                }
+                
                 bars.forEach(b => b.classList.add('sorted'));
-            } catch (e) { console.log("Stopped"); } 
-            finally {
+            } catch (e) {
+                console.log("Sort Aborted");
+            } finally {
                 isSorting = false;
                 document.getElementById('startBtn').disabled = false;
             }
         }
 
+        // --- Visuals & Audio ---
         function generateArray(size) {
             array = Array.from({length: size}, () => Math.floor(Math.random() * 280) + 20);
             sortedArray = [...array].sort((a,b) => a-b);
